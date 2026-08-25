@@ -1,0 +1,138 @@
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use App\Transformer\CommissionEmployeeHistoryTransformer;
+use Carbon\Carbon;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Yajra\DataTables\DataTables;
+
+class CommissionEmployeeHistoryController extends Controller
+{
+    public function __construct()
+    {
+        $this->middleware('auth:admin');
+    }
+
+    public function index(Request $request){
+        try {
+            $admin = Auth::guard('admin')->user();
+
+            $filterBranchId = $admin->branch_id;
+
+            $filterStartDate = Carbon::today()->subMonths(1)->format('d-m-Y');
+            $filterEndDate = Carbon::today()->format('d-m-Y');
+
+            if($request->start_date != null && $request->end_date != null){
+                $startDateDecoded = rawurldecode($request->start_date);
+                $endDateDecoded = rawurldecode($request->end_date);
+                $start = Carbon::createFromFormat('!d-m-Y', $startDateDecoded, 'Asia/Jakarta');
+                $end = Carbon::createFromFormat('!d-m-Y', $endDateDecoded, 'Asia/Jakarta');
+
+                if($end->greaterThanOrEqualTo($start)){
+                    $filterStartDate = $startDateDecoded;
+                    $filterEndDate = $endDateDecoded;
+                }
+            }
+
+            $filterEmployeeId = -1;
+            $filterEmployee = null;
+            if($filterBranchId > 0){
+                // Filter item
+                if($request->employee_id != null){
+                    $filterEmployeeId = intval($request->employee_id);
+                    $filterEmployee = DB::table('employees')
+                        ->where('id', '=', $filterEmployeeId)
+                        ->first();
+
+                    if(empty($filterEmployee)){
+                        $filterEmployeeId = -1;
+                    }
+                }
+            }
+
+            $filterItemId = -1;
+            $filterItem = null;
+            if($filterBranchId > 0){
+                // Filter item
+                if($request->item_id != null){
+                    $filterItemId = intval($request->item_id);
+                    $filterItem = DB::table('items')
+                        ->where('id', '=', $filterItemId)
+                        ->first();
+
+                    if(empty($filterItem)){
+                        $filterItemId = -1;
+                    }
+                }
+            }
+
+            $branches = DB::table('branches')
+                ->orderBy('name')
+                ->get();
+
+            $data = [
+//                'isSuperAdmin' => $admin->is_super,
+                'isSuperAdmin' => false,
+                'filterStartDate' => $filterStartDate,
+                'filterEndDate' => $filterEndDate,
+                'filterBranchId' => $filterBranchId,
+                'filterEmployeeId' => $filterEmployeeId,
+                'filterEmployee' => $filterEmployee,
+                'filterItemId' => $filterItemId,
+                'filterItem' => $filterItem,
+                'branches' => $branches
+            ];
+
+            return view('admin.commission.index_employee_history')->with($data);
+        }
+        catch (\Exception $ex){
+            Log::channel('hrd')->error('Admin/CommissionEmployeeHistoryController - index '. $ex);
+            return 'Terjadi kesalahan pada sistem!';
+        }
+    }
+
+    public function getIndex(Request $request){
+        $histories = DB::table('commission_employee_histories');
+
+        $admin = Auth::guard('admin')->user();
+
+        if($request->filled('filter_branch_id')){
+            $filterBranchId = $request->input('filter_branch_id');
+            if($filterBranchId > 0){
+                $histories = $histories->where('branch_id', '=', $filterBranchId);
+            }
+        }
+
+        // Filter date
+        $start = Carbon::createFromFormat('!d-m-Y', $request->input('start_date'), 'Asia/Jakarta');
+        $end = Carbon::createFromFormat('!d-m-Y', $request->input('end_date'), 'Asia/Jakarta');
+        $end->addDays(1);
+
+        $histories = $histories->whereBetween('created_at', array($start->toDateTimeString(), $end->toDateTimeString()));
+
+        // Filter employee
+        if($request->filled('filter_employee_id')){
+            $filterEmployeeId = $request->input('filter_employee_id');
+            if($filterEmployeeId > 0){
+                $histories = $histories->where('employee_id', '=', $filterEmployeeId);
+            }
+        }
+
+        // Filter item id
+        if($request->filled('filter_item_id')){
+            $filterItemId = $request->input('filter_item_id');
+            if($filterItemId > 0){
+                $histories = $histories->where('item_id', '=', $filterItemId);
+            }
+        }
+
+        return DataTables::of($histories)
+            ->setTransformer(new CommissionEmployeeHistoryTransformer())
+            ->make(true);
+    }
+}

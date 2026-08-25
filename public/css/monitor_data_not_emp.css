@@ -1,0 +1,213 @@
+.custom-circle {
+    background: lightblue;
+    border-radius: 50%;
+    width: 100px;
+    height: 100px;
+    font-size: 14px;
+    color: black;
+    text-align: center;
+    padding: 14px 0;
+}
+
+.custom-square {
+    background: lightblue;
+    width: 100px;
+    height: 100px;
+    font-size: 14px;
+    color: black;
+    text-align: center;
+    border-radius: 5px;
+    padding: 0px 0;
+}
+
+.custom-square-red {
+    background: indianred;
+    width: 100px;
+    height: 100px;
+    font-size: 14px;
+    color: black;
+    text-align: center;
+    border-radius: 5px;
+    padding: 10px 0;
+}
+
+#context-menu{
+    position: fixed;
+    z-index: 10000;
+    width: 150px;
+    background: black;
+    border-radius: 5px;
+    transform: scale(0);
+    transform-origin: top left;
+}
+
+#context-menu.visible{
+    transform: scale(1);
+    transition: transform 200ms ease-in-out;
+}
+
+#context-menu .item{
+    padding: 8px 10px;
+    font-size: 15px;
+    color: #eee;
+    cursor: pointer;
+    border-radius: inherit;
+    width: 100%;
+}
+
+#context-menu .item:hover{
+    background: #343434;
+}
+
+#partner-menu{
+    position: fixed;
+    z-index: 10000;
+    width: 150px;
+    background: black;
+    border-radius: 5px;
+    transform: scale(0);
+    transform-origin: top left;
+}
+
+#partner-menu.visible{
+    transform: scale(1);
+    transition: transform 200ms ease-in-out;
+}
+
+#partner-menu .item{
+    padding: 8px 10px;
+    font-size: 15px;
+    color: #eee;
+    cursor: pointer;
+    border-radius: inherit;
+    width: 100%;
+    text-align: left;
+}
+
+#partner-menu .item:hover{
+    background: #343434;
+}
+
+.blink-bg{
+    background-color: red;
+    font-size: 13px;
+    animation-duration: 1200ms;
+    animation-name: blink;
+    animation-iteration-count: infinite;
+    animation-direction: alternate;
+    -webkit-animation:blink 1200ms infinite; /* Safari and Chrome */
+    color: #fff;
+    animation: colorBlink 2s infinite;
+}
+
+/*.blink-bg .timer-text{*/
+/*    color: #fff;*/
+/*    animation: colorBlink 2s infinite;*/
+/*}*/
+
+/*.blink-bg .close-text{*/
+/*    animation-duration: 1200ms;*/
+/*    animation-name: blink;*/
+/*    animation-iteration-count: infinite;*/
+/*    animation-direction: alternate;*/
+/*    -webkit-animation:blink 1200ms infinite; !* Safari and Chrome *!*/
+/*}*/
+
+@keyframes blink {
+    from {
+        color:black;
+    }
+    to {
+        color:white;
+    }
+}
+
+@-webkit-keyframes blink {
+    from {
+        color:black;
+    }
+    to {
+        color:white;
+    }
+}
+
+.blink-text{
+    color: #fff;
+    animation: colorBlink 2s infinite;
+}
+
+.work-book-bg{
+    background-color: yellow;
+}
+
+@keyframes workBookBlinkBg{
+    0%		{ background-color: #FFFF00;}
+    25%		{ background-color: red;}
+    50%		{ background-color: #FFFF00;}
+    75%		{ background-color: red;}
+    100%	{ background-color: #FFFF00;}
+}
+
+@keyframes colorBlink{
+    0%		{ background-color: red;}
+    25%		{ background-color: lightgreen;}
+    50%		{ background-color: #ef0a1a;}
+    75%		{ background-color: lightgreen;}
+    100%	{ background-color: red;}
+}
+
+@keyframes bookBlinkBg{
+    0%		{ background-color: #FFFF00;}
+    25%		{ background-color: darkgrey;}
+    50%		{ background-color: #FFFF00;}
+    75%		{ background-color: darkgrey;}
+    100%	{ background-color: #FFFF00;}
+}
+
+@keyframes blinkingBackground{
+    0%		{ background-color: red;}
+    25%		{ background-color: lightgreen;}
+    50%		{ background-color: #ef0a1a;}
+    75%		{ background-color: lightgreen;}
+    100%	{ background-color: red;}
+}
+
+.box {
+    float: left;
+    height: 20px;
+    width: 20px;
+    clear: both;
+}
+
+.circle-custom {
+    border-radius: 50%;
+    float: left;
+    height: 20px;
+    width: 20px;
+    clear: both;
+}
+
+.red {
+    background-color: red;
+    color: white;
+}
+
+.green {
+    background-color: lightgreen;
+}
+
+.blue {
+    background-color: lightblue;
+}
+
+.yellow {
+    background-color: lightblue;
+}
+
+.grey {
+    background-color: darkgrey;
+}
+
+.pink {
+    background-color: pink;
+}
