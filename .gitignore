@@ -26,6 +26,9 @@ PROJECT-GUIDE.md
 AGENTS.md
 /.agents
 /.codex
+/.commandcode
+.mcp.json
+.rnd
 /docs
 outputs/*
 public/acme-test-firebase.json

@@ -1,0 +1,91 @@
+name: Deploy development
+
+on:
+  push:
+    branches: [deploy-dev]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ref-manager-dev
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment:
+      name: deploy-dev
+      url: ${{ vars.SITE_URL }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
+        with:
+          php-version: ${{ vars.VPS_PHP_VERSION }}
+          extensions: gd, bcmath, intl, pdo_mysql, zip, xml, mbstring, fileinfo
+          tools: composer:v2
+          coverage: none
+
+      - name: Build Laravel release
+        run: |
+          bash -n deploy/deploy-dev.sh
+          composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader --no-progress
+          composer check-platform-reqs --lock --no-dev
+
+          stage=$(mktemp -d "$RUNNER_TEMP/ref-manager.XXXXXXXX")
+          git archive "$GITHUB_SHA" -- app artisan bootstrap composer.json composer.lock config database public resources routes | tar -xf - -C "$stage"
+          cp -a vendor "$stage/vendor"
+
+          # Only application source and Composer dependencies reach the host.
+          tar -czf "$RUNNER_TEMP/ref-manager.tar.gz" -C "$stage" \
+            app artisan bootstrap composer.json composer.lock config database public resources routes vendor
+
+      - name: Upload and deploy
+        env:
+          DEPLOY_ROOT: ${{ vars.DEPLOY_PATH }}
+          SITE_URL: ${{ vars.SITE_URL }}
+          VPS_HOST: ${{ vars.VPS_HOST }}
+          VPS_PORT: ${{ vars.VPS_PORT }}
+          VPS_USER: ${{ vars.VPS_USER }}
+          VPS_PHP_VERSION: ${{ vars.VPS_PHP_VERSION }}
+          VPS_DB_DATABASE: ${{ vars.VPS_DB_DATABASE }}
+          VPS_SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+          VPS_SSH_KNOWN_HOSTS: ${{ secrets.VPS_SSH_KNOWN_HOSTS }}
+        run: |
+          fail() { printf '%s\n' "$*" >&2; exit 1; }
+          [[ "$VPS_HOST" =~ ^[a-zA-Z0-9][a-zA-Z0-9.-]*$ ]] || fail 'Invalid VPS_HOST.'
+          [[ "$VPS_PORT" =~ ^[1-9][0-9]{0,4}$ ]] && (( VPS_PORT <= 65535 )) || fail 'Invalid VPS_PORT.'
+          [[ "$VPS_USER" =~ ^[a-z_][a-z0-9_-]*$ && "$VPS_USER" != root && "$VPS_USER" != ubuntu ]] || fail 'Use a non-root site account for VPS_USER.'
+          [[ "$VPS_PHP_VERSION" =~ ^8\.[3-9]$ && "$VPS_DB_DATABASE" =~ ^[a-zA-Z0-9_][a-zA-Z0-9_-]*$ ]] || fail 'Invalid VPS_PHP_VERSION or VPS_DB_DATABASE.'
+          [[ "$DEPLOY_ROOT" =~ ^/home/[a-z0-9_.-]+/web/[a-z0-9_.-]+/public_html$ ]] || fail 'Invalid DEPLOY_PATH.'
+          [[ "$SITE_URL" =~ ^https://[a-z0-9.-]+$ ]] || fail 'Invalid SITE_URL.'
+          : "${VPS_SSH_PRIVATE_KEY:?Missing deploy key}" "${VPS_SSH_KNOWN_HOSTS:?Missing pinned host key}"
+
+          umask 077
+          credentials=$(mktemp -d "$RUNNER_TEMP/ref-manager-ssh.XXXXXXXX")
+          trap 'rm -rf -- "$credentials"' EXIT
+          printf '%s\n' "$VPS_SSH_PRIVATE_KEY" > "$credentials/key"
+          printf '%s\n' "$VPS_SSH_KNOWN_HOSTS" > "$credentials/known_hosts"
+          unset VPS_SSH_PRIVATE_KEY VPS_SSH_KNOWN_HOSTS
+
+          ssh_options=(-F /dev/null -i "$credentials/key" -o "Port=$VPS_PORT" -o BatchMode=yes
+            -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=15
+            -o "UserKnownHostsFile=$credentials/known_hosts" -o GlobalKnownHostsFile=/dev/null)
+          target="$VPS_USER@$VPS_HOST"
+          archive="$RUNNER_TEMP/ref-manager.tar.gz"
+          checksum=$(sha256sum "$archive" | cut -d ' ' -f 1)
+          name="release-$GITHUB_SHA-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT.tar.gz"
+          incoming="$DEPLOY_ROOT/.deploy/incoming"
+
+          ssh "${ssh_options[@]}" "$target" "test -s '$DEPLOY_ROOT/.env' && install -d -m 700 '$DEPLOY_ROOT/.deploy' '$incoming'"
+          scp "${ssh_options[@]}" "$archive" "$target:$incoming/$name"
+          ssh "${ssh_options[@]}" "$target" \
+            "bash -s -- '$DEPLOY_ROOT' '$SITE_URL' '$VPS_PHP_VERSION' '$VPS_DB_DATABASE' '$GITHUB_SHA' '$name' '$checksum'" \
+            < deploy/deploy-dev.sh

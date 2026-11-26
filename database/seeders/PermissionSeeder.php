@@ -6,6 +6,7 @@ use App\Models\AdminUser;
 use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 
 class PermissionSeeder extends Seeder
 {
@@ -23,17 +24,24 @@ class PermissionSeeder extends Seeder
             'booking' => ['add', 'approve', 'assign', 'cancel', 'edit', 'finalize', 'list', 'show'],
             'branch' => ['list', 'scope_all'],
             'coa' => ['add', 'delete', 'edit', 'list'],
+            'customer' => ['delete', 'edit'],
             'delivery_order' => ['delete', 'edit', 'show'],
             'employee' => ['add', 'delete', 'edit', 'list', 'show'],
+            'employee_position' => ['edit'],
             'finance' => ['ap_aging', 'ap_card', 'ap_invoice_list', 'ar_aging', 'ar_card'],
             'general_ledger' => ['balance_sheet', 'cashflow', 'ledger', 'profit_and_loss', 'profit_loss', 'trial_balance'],
             'good_receive' => ['add', 'approve', 'delete', 'edit', 'list', 'show'],
             'inventori' => ['list'],
+            'inventory_in' => ['delete', 'edit', 'show'],
+            'inventory_out' => ['delete', 'edit', 'show'],
             'item' => ['add', 'delete', 'edit', 'list'],
             'item_category' => ['add', 'delete', 'edit', 'list', 'show'],
             'item_transfer' => ['add', 'approve', 'delete', 'edit', 'list', 'show'],
+            'item_unit' => ['delete', 'list'],
             'admin_user' => ['manage'],
             'journal_manual' => ['add', 'approve', 'delete', 'edit', 'list', 'show', 'unapprove'],
+            'maklon' => ['delete', 'edit', 'show'],
+            'material_request' => ['delete', 'edit', 'show'],
             'member' => ['list'],
             'master_banner' => ['add'],
             'monitor' => ['list'],
@@ -42,16 +50,20 @@ class PermissionSeeder extends Seeder
             'partner' => ['add', 'delete', 'edit', 'list', 'show'],
             'position' => ['add', 'delete', 'edit', 'list', 'show'],
             'prewedding' => ['add', 'approve', 'cancel', 'edit', 'list', 'process', 'show'],
+            'profit_center' => ['delete', 'edit'],
             'purchase_order' => ['add', 'approve', 'delete', 'edit', 'list', 'show'],
             'purchase_request' => ['add', 'approve', 'delete', 'edit', 'list', 'show'],
             'purchasing' => ['good_receive', 'purchase_order', 'purchase_request'],
             'reporting' => ['daily_recap', 'laba_kotor', 'mtdytd', 'terapis', 'trx_commision', 'trx_payment', 'trx_report', 'voucher'],
-            'room' => ['add', 'delete', 'edit', 'list'],
+            'request_for_quotation' => ['delete', 'edit', 'show'],
             'role' => ['manage'],
+            'room' => ['add', 'delete', 'edit', 'list'],
             'salary' => ['delete', 'edit', 'show'],
             'sales_invoice' => ['delete', 'edit', 'show'],
             'sales_order' => ['delete', 'edit', 'show'],
+            'service' => ['delete', 'edit', 'show'],
             'stock_card' => ['list'],
+            'stock_opname' => ['delete', 'edit'],
             'supplier' => ['add', 'delete', 'edit', 'list', 'show'],
             'supplier_invoice' => ['add', 'approve', 'delete', 'edit', 'list', 'show'],
             'transaction' => ['list', 'update_payment', 'void'],
@@ -83,10 +95,10 @@ class PermissionSeeder extends Seeder
 
         $admin = AdminUser::query()
             ->whereRaw('LOWER(username) = ?', ['superadmin'])
-            ->where('name', 'Superadmin')
             ->firstOrFail();
 
-        $admin->syncPermissions([]);
         $admin->syncRoles([$superadmin]);
+
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
     }
 }
